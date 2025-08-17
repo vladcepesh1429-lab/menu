@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Меню для двоих</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fdf6e3; color: #333; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #ff6347; margin-bottom: 20px; }
+    .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tabs button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 12px; background: #ffa07a; color: #fff; font-weight: bold; transition: background 0.3s, transform 0.3s; font-size: 1em; display: flex; align-items: center; gap: 6px; }
+    .tabs button:hover { background: #ff4500; transform: scale(1.05); }
+    .tabs button.active { background: #ff4500; }
+    #menu { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; opacity: 1; transition: opacity 0.4s ease; }
+    .dish { width: 180px; padding: 10px; background: #fff; border-radius: 16px; text-align: center; cursor: pointer; transition: 0.3s; border: 2px solid #ffa07a; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+    .dish:hover { transform: scale(1.05); box-shadow: 0 8px 12px rgba(0,0,0,0.15); }
+    .dish img { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; margin-bottom: 8px; }
+    .selected-You { background: #ff6347; color: #fff; border-color: #ff6347; }
+    .selected-Her { background: #1e90ff; color: #fff; border-color: #1e90ff; }
+    .selected-label { font-size: 0.8em; font-weight: bold; margin-top: 4px; display: block; }
+    #status { margin-top: 15px; font-weight: bold; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>Меню для двоих</h1>
+
+  <div class="tabs">
+    <button data-tab="breakfast" class="active">🥞 Завтрак</button>
+    <button data-tab="lunch">🍝 Обед</button>
+    <button data-tab="dinner">🍗 Ужин</button>
+    <button data-tab="dessert">🍰 Выпечка</button>
+  </div>
+
+  <div id="menu"></div>
+  <div id="status"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDq4A9YpwfuZd3--seS0IZwjQz_Gpt5yC8",
+      authDomain: "chef-list-e9937.firebaseapp.com",
+      projectId: "chef-list-e9937",
+      storageBucket: "chef-list-e9937.firebasestorage.app",
+      messagingSenderId: "614919865403",
+      appId: "1:614919865403:web:6ed9b9360703321743c81e",
+      measurementId: "G-8X11EKYN5V"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let currentTab = 'breakfast';
+    const FAMILY_CODE = "our-home"; 
+    const USER_NAME = "You";          
+    const OTHER_NAME = "Her";         
+
+    const menuData = {
+      breakfast: [
+        { name: "Чизкейк", img: "https://source.unsplash.com/200x150/?cheesecake" },
+        { name: "Синнабоны", img: "https://source.unsplash.com/200x150/?cinnamon-roll" },
+        { name: "Блины", img: "https://source.unsplash.com/200x150/?pancakes" }
+      ],
+      lunch: [
+        { name: "Удон", img: "https://source.unsplash.com/200x150/?udon" },
+        { name: "Макароны с ветчиной грибами", img: "https://source.unsplash.com/200x150/?pasta" },
+        { name: "Рубленные котлеты", img: "https://source.unsplash.com/200x150/?cutlets" },
+        { name: "Борщ", img: "https://source.unsplash.com/200x150/?borscht" },
+        { name: "Суп с грибочками и сыром", img: "https://source.unsplash.com/200x150/?mushroom-soup" },
+        { name: "Шаурма", img: "https://source.unsplash.com/200x150/?shawarma" }
+      ],
+      dinner: [
+        { name: "Гнёзда с сыром грибами", img: "https://source.unsplash.com/200x150/?pasta-bake" },
+        { name: "Пицца", img: "https://source.unsplash.com/200x150/?pizza" },
+        { name: "Крылышки", img: "https://source.unsplash.com/200x150/?chicken-wings" },
+{ name: "Макароны с фаршем", img: "https://source.unsplash.com/200x150/?pasta-meat" },
+        { name: "Лазанья", img: "https://source.unsplash.com/200x150/?lasagna" },
+        { name: "Лепёшка с сыром чесноком", img: "https://source.unsplash.com/200x150/?cheese-bread" }
+      ],
+      dessert: [
+        { name: "Медовик", img: "https://source.unsplash.com/200x150/?honey-cake" },
+        { name: "Трубочки со сгущёнкой", img: "https://source.unsplash.com/200x150/?pastry" },
+        { name: "Шарлотка", img: "https://source.unsplash.com/200x150/?apple-pie" },
+        { name: "Пирог с клубникой", img: "https://source.unsplash.com/200x150/?strawberry-pie" },
+        { name: "Киш", img: "https://source.unsplash.com/200x150/?quiche" }
+      ]
+    };
+
+    const menuDiv = document.getElementById('menu');
+
+    document.querySelectorAll('.tabs button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        fadeMenu(loadMenu);
+      };
+    });
+
+    function fadeMenu(callback) {
+      menuDiv.style.opacity = 0;
+      setTimeout(() => {
+        callback();
+        menuDiv.style.opacity = 1;
+      }, 300);
+    }
+
+    function loadMenu() {
+      menuDiv.innerHTML = '';
+      menuData[currentTab].forEach(dish => {
+        const div = document.createElement('div');
+        div.className = 'dish';
+        div.innerHTML = <img src="${dish.img}" alt="${dish.name}"><div>${dish.name}</div><span class="selected-label"></span>;
+        div.onclick = () => selectDish(dish.name);
+        menuDiv.appendChild(div);
+      });
+    }
+
+    async function selectDish(dish) {
+      await setDoc(doc(db, FAMILY_CODE, currentTab), { [USER_NAME]: dish }, { merge: true });
+    }
+
+    function listenMenu() {
+      Object.keys(menuData).forEach(tab => {
+        const docRef = doc(db, FAMILY_CODE, tab);
+        onSnapshot(docRef, (docSnap) => {
+          if(docSnap.exists()) {
+            updateMenuUI(tab, docSnap.data());
+          }
+        });
+      });
+    }
+
+    function updateMenuUI(tab, data) {
+      if(tab !== currentTab) return;
+      const dishes = document.querySelectorAll('.dish');
+      dishes.forEach(dishDiv => {
+        const label = dishDiv.querySelector('.selected-label');
+        label.textContent = '';
+        dishDiv.classList.remove('selected-You','selected-Her');
+        for(const user in data) {
+          if(data[user] === dishDiv.querySelector('div').textContent) {
+            dishDiv.classList.add(user === USER_NAME ? 'selected-You' : 'selected-Her');
+            label.textContent = user;
+          }
+        }
+      });
+    }
+
+    loadMenu();
+    listenMenu();
+  </script>
+</body>
+</html>
